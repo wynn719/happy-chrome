@@ -26,22 +26,22 @@ export default defineManifest({
   },
   content_scripts: [
     {
-      matches: ['http://*/*', 'https://*/*'],
-      // matches: ['http://lx.net', 'http://*.lx.net', 'https://lexiangla.net', 'https://*.lexiangla.net', 'https://lexiangla.com', 'https://*.lexiangla.com'],
+      matches: [
+        'http://lx.net/*',
+        'http://*.lx.net/*',
+        'https://lexiangla.net/*',
+        'https://*.lexiangla.net/*',
+        'https://lexiangla.com/*',
+        'https://*.lexiangla.com/*',
+      ],
       js: ['src/contentScript/index.js'],
     },
   ],
-  side_panel: {
-    default_path: 'sidepanel.html',
-  },
   web_accessible_resources: [
     {
       resources: ['img/logo-16.png', 'img/logo-34.png', 'img/logo-48.png', 'img/logo-128.png'],
       matches: [],
     },
   ],
-  permissions: ['sidePanel', 'storage', 'tabs'],
-  chrome_url_overrides: {
-    newtab: 'newtab.html',
-  },
+  permissions: ['tabs'],
 })

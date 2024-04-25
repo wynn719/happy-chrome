@@ -1,60 +1,127 @@
 import { useState, useEffect, useMemo } from 'react'
+import { Box, Stack, Button } from '@chakra-ui/react'
 
-import './Popup.css'
+function getSubdomainPrefix(url) {
+  const regex = /^(?:https?:\/\/)?([a-z0-9-]+)\.[a-z0-9-]+\.[a-z]{2,}$/i
+  const match = url.match(regex)
+  let subdomainPrefix = ''
 
-export const Popup = () => {
-  const [count, setCount] = useState(0)
-  const link = 'https://github.com/guocaoyi/create-chrome-ext'
-
-  const minus = () => {
-    if (count > 0) setCount(count - 1)
+  if (match && match[1]) {
+    subdomainPrefix = match[1]
   }
 
-  const add = () => setCount(count + 1)
+  return subdomainPrefix + '.'
+}
+
+function openNewTab(url) {
+  chrome.tabs.create({ url })
+}
+
+function useCurrentUrl() {
+  const [currentUrl, setCurrentUrl] = useState('')
+  const currentOrigin = useMemo(() => {
+    if (currentUrl) {
+      const url = new URL(currentUrl)
+      return `${url.protocol}//${url.hostname}`
+    }
+
+    return ''
+  }, [currentUrl])
+  const isLexiang = useMemo(() => {
+    if (currentUrl) {
+      const url = new URL(currentUrl);
+      const lexiang = ['lx.net', 'lexiangla.net', 'lexiangla.com'];
+      if (lexiang.some((domain) => url.hostname.includes(domain))) {
+        return true;
+      }
+
+      return false;
+    }
+  }, [currentUrl]);
 
   useEffect(() => {
-    chrome.storage.sync.get(['count'], (result) => {
-      setCount(result.count || 0)
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      setCurrentUrl(tabs[0].url)
     })
   }, [])
 
-  // useEffect(() => {
-  //   chrome.storage.sync.set({ count })
-  //   chrome.runtime.sendMessage({ type: 'COUNT', count })
-  // }, [count])
-  const [currentUrl, setCurrentUrl] = useState('')
+  return {
+    currentUrl,
+    currentOrigin,
+    isLexiang,
+  }
+}
+
+function ShortCuts() {
+  const { currentOrigin } = useCurrentUrl()
+  const shortCuts = useMemo(() => [
+    {
+      name: 'settings',
+      url: `${currentOrigin}/settings`,
+    },
+    {
+      name: 'admin-version-function',
+      url: `${currentOrigin}/admin/dev/version-function`,
+    },
+  ])
+
+  return (
+    <Box margin={3}>
+      <Stack spacing={4} direction={'row'} align={'center'}>
+        {shortCuts.map(({ name, url }) => {
+          return (
+            <Button key={name} colorScheme={'teal'} size={'xs'} onClick={() => openNewTab(url)}>
+              {name}
+            </Button>
+          )
+        })}
+      </Stack>
+    </Box>
+  )
+}
+
+export const Popup = () => {
+  const { currentUrl, isLexiang } = useCurrentUrl();
   const lexiangUrls = useMemo(() => {
     if (currentUrl) {
-      const url = new URLSearchParams(currentUrl)
-      console.log(url);
-      const pathname = `${url.pathname}${url.search}`
+      const url = new URL(currentUrl)
+      const subdomainPrefix = getSubdomainPrefix(url.hostname)
+      const path = `${url.pathname}${url.search}`
 
       return [
-        { name: 'local', url: `http://lx.net${pathname}` },
-        { name: 'net', url: `https://lexiangla.net${pathname}` },
-        { name: 'com', url: `https://lexiangla.com${pathname}` },
+        { name: 'local', url: `http://${subdomainPrefix}lx.net${path}` },
+        { name: 'net', url: `https://${subdomainPrefix}lexiangla.net${path}` },
+        { name: 'com', url: `https://${subdomainPrefix}lexiangla.com${path}` },
       ]
     }
 
     return []
   }, [currentUrl])
 
-  useEffect(() => {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      console.log(tabs);
-      setCurrentUrl(tabs[0].url)
-    })
-  }, [])
+  if (!isLexiang) {
+    return (
+      <main>
+        <Box padding={3} alignItems={'center'} justifyContent={'center'} justifyItems={'center'}>
+          Hava a nice day!
+        </Box>
+      </main>
+    )
+  }
 
   return (
     <main>
-      {lexiangUrls.map(({ name, url }) => {
-        return (
-          <div>
-            <a href={url}>跳转到：{name}</a>
-          </div>
-        )
-      })}
+      <Box margin={3}>
+        <Stack spacing={4} direction={'row'} align={'center'}>
+          {lexiangUrls.map(({ name, url }) => {
+            return (
+              <Button key={name} colorScheme={'teal'} size={'xs'} onClick={() => openNewTab(url)}>
+                {name}
+              </Button>
+            )
+          })}
+        </Stack>
+      </Box>
+      <ShortCuts></ShortCuts>
     </main>
   )
 }
